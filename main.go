@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"text/template"
 )
 
 func main() {
 	fs := http.FileServer(http.Dir("./static"))
+	
 
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
@@ -20,7 +22,12 @@ func main() {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World.")
+	tmpl, err := template.ParseFiles("templates/index.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
 }
 
 func postHandler(w http.ResponseWriter, r *http.Request) {
