@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Posts - dmc's RooM</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+    {{template "nav.html" .}}
+    
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Page Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">All Posts</h1>
+            <p class="text-xl text-gray-600 dark:text-gray-300">Total {{len .Posts}} posts</p>
+        </div>
+
+        <!-- Posts Grid -->
+        <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-1">
+            {{range .Posts}}
+            <article class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden hover:shadow-md transition">
+                <div class="p-4">
+                    <!-- Post Meta -->
+                    <div class="flex items-center mb-1">
+                        <time class="text-sm text-gray-500 dark:text-gray-400" datetime="{{.Date.Format "2006-01-02"}}">
+                            {{.Date.Format "January 2, 2006"}}
+                        </time>
+                        {{if .Tags}}
+                        <div class="ml-auto flex gap-2">
+                            {{range .Tags}}
+                            <span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded">{{.}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                    
+                    <!-- Post Title -->
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                        <a href="/posts/{{.Slug}}" class="hover:text-blue-600 dark:hover:text-blue-400 transition">
+                            {{.Title}}
+                        </a>
+                    </h2>
+                    
+                    <!-- Post Summary -->
+                    <!-- <p class="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+                        {{.Summary}}
+                    </p> -->
+                    
+                    <!-- Read More Link -->
+                    <!-- <a href="/posts/{{.Slug}}" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+                        Read more
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a> -->
+                </div>
+            </article>
+            {{else}}
+            <div class="col-span-full text-center py-12">
+                <p class="text-gray-500 dark:text-gray-400 text-lg">No posts found.</p>
+                <p class="text-gray-400 dark:text-gray-500 mt-2">Check back later for new content!</p>
+            </div>
+            {{end}}
+        </div>
+    </main>
+
+    {{template "footer.html" .}}
+
+    <!-- Theme Toggle JavaScript -->
+    <script src="/static/js/theme-toggle.js"></script>
+</body>
+</html>
