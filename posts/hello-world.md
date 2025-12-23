@@ -25,6 +25,12 @@ I plan to write about:
 3. Life experiences
 4. Technical tutorials
 
+```Go
+func main() {
+	println("Hello, World!")
+}
+```
+
 ## Conclusion
 
 Thanks for visiting my blog! I'm excited to share more content with you soon.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
@@ -8,6 +9,17 @@ import (
 	"strings"
 	"time"
 )
+
+type Post struct {
+	Title       string
+	Content     string
+	Date        time.Time
+	Tags        []string
+	Summary     string
+	Slug        string
+	PageData    // 嵌入页面数据
+}
+
 
 // parseFrontMatter 解析文章的 front matter（标题、日期、标签等）
 func parseFrontMatter(content string) (map[string]string, string) {
@@ -110,10 +122,11 @@ func stripHTML(s string) string {
 
 // simpleMarkdownToHTML 简单的 Markdown 到 HTML 转换
 func simpleMarkdownToHTML(s string) template.HTML {
+
 	// 转换标题
-	s = regexp.MustCompile(`^### (.+)$`).ReplaceAllString(s, "<h3 class='text-xl font-semibold mb-4'>$1</h3>")
-	s = regexp.MustCompile(`^## (.+)$`).ReplaceAllString(s, "<h2 class='text-2xl font-bold mb-6'>$1</h2>")
-	s = regexp.MustCompile(`^# (.+)$`).ReplaceAllString(s, "<h1 class='text-3xl font-bold mb-8'>$1</h1>")
+	s = regexp.MustCompile(`(?m)^###\s+(.+)\n`).ReplaceAllString(s, "<h3 class='text-xl font-semibold mb-4'>$1</h3>")
+	s = regexp.MustCompile(`(?m)^##\s+(.+)\n`).ReplaceAllString(s, "<h2 class='text-2xl font-bold mb-6'>$1</h2>")
+	s = regexp.MustCompile(`(?m)^#\s+(.+)\n`).ReplaceAllString(s, "<h1 class='text-3xl font-bold mb-8'>$1</h1>")
 	
 	// 转换粗体文本
 	s = regexp.MustCompile(`\*\*(.+?)\*\*`).ReplaceAllString(s, "<strong>$1</strong>")
@@ -121,6 +134,7 @@ func simpleMarkdownToHTML(s string) template.HTML {
 	
 	// 转换代码块
 	s = regexp.MustCompile("```(\\w+)?\\n([\\s\\S]*?)```").ReplaceAllString(s, "<pre class='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-6 overflow-x-auto'><code>$2</code></pre>")
+	// convert inline code
 	s = regexp.MustCompile("`(.*?)`").ReplaceAllString(s, "<code class='bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm'>$1</code>")
 	
 	// 转换列表
@@ -128,22 +142,44 @@ func simpleMarkdownToHTML(s string) template.HTML {
 	var result []string
 	inList := false
 	
-	for _, line := range lines {
-		if strings.HasPrefix(line, "- ") {
+	for _, v := range lines {
+		fmt.Println(v)
+	}
+
+	for i := 0; i < len(lines); i++ {
+
+		if strings.HasPrefix(lines[i], "<pre class='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-6 overflow-x-auto'><code>") {
+			for !strings.HasPrefix(lines[i], "</code></pre>") {
+				result = append(result, lines[i])
+				i++
+			}
+			result = append(result, lines[i])
+		} else {
+			if strings.HasPrefix(lines[i], "- ") {
 			if !inList {
 				result = append(result, "<ul class='list-disc list-inside mb-6 space-y-2'>")
 				inList = true
 			}
-			content := strings.TrimPrefix(line, "- ")
+			content := strings.TrimPrefix(lines[i], "- ")
 			result = append(result, "<li>"+content+"</li>")
 		} else {
 			if inList {
 				result = append(result, "</ul>")
 				inList = false
 			}
-			if line != "" {
-				result = append(result, "<p class='mb-4'>"+line+"</p>")
+			if lines[i] != "" {
+				// result = append(result,lines[i])//, "<p class='mb-4'>"+lines[i]+"</p>")
+				hasTag := strings.HasPrefix(lines[i], "<h") || 
+                 strings.HasPrefix(lines[i], "<li>") || 
+                 strings.HasPrefix(lines[i], "<hr")
+        
+				if hasTag {
+					result = append(result, lines[i])
+				} else {
+					result = append(result, fmt.Sprintf("<p class='mb-4'>%s</p>", lines[i]))
+				}
 			}
+		}
 		}
 	}
 	
@@ -151,6 +187,10 @@ func simpleMarkdownToHTML(s string) template.HTML {
 		result = append(result, "</ul>")
 	}
 	
+	for _, v := range result {
+		fmt.Println(v)
+	}
+
 	return template.HTML(strings.Join(result, "\n"))
 }
 
@@ -194,3 +234,50 @@ func loadPost(slug string) (*Post, error) {
 	
 	return post, nil
 }
+
+// loadPosts 加载所有文章
+func loadPosts() ([]Post, error) {
+	postsDir := "posts"
+	var posts []Post
+	
+	// 遍历 posts 目录
+	err := filepath.Walk(postsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		
+		// 只处理 .md 文件，排除目录
+		if !info.IsDir() && strings.HasSuffix(path, ".md") {
+			// 提取文件名作为 slug
+			fileName := strings.TrimSuffix(filepath.Base(path), ".md")
+			
+			fmt.Println(fileName)
+
+			// 使用 loadPost 函数加载单篇文章
+			post, err := loadPost(fileName)
+			if err != nil {
+				return err
+			}
+			
+			posts = append(posts, *post)
+		}
+		
+		return nil
+	})
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	// 按日期排序（最新的在前）
+	for i := 0; i < len(posts)-1; i++ {
+		for j := i + 1; j < len(posts); j++ {
+			if posts[i].Date.Before(posts[j].Date) {
+				posts[i], posts[j] = posts[j], posts[i]
+			}
+		}
+	}
+	
+	return posts, nil
+}
+

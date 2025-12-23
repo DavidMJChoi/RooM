@@ -5,76 +5,13 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
-	"time"
 )
 
 // PageData 包含页面共用数据
 type PageData struct {
 	CurrentPage string
 }
-
-// Post 表示一篇博客文章
-type Post struct {
-	Title       string
-	Content     string
-	Date        time.Time
-	Tags        []string
-	Summary     string
-	Slug        string
-	PageData    // 嵌入页面数据
-}
-
-
-
-// loadPosts 加载所有文章
-func loadPosts() ([]Post, error) {
-	postsDir := "posts"
-	var posts []Post
-	
-	// 遍历 posts 目录
-	err := filepath.Walk(postsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		
-		// 只处理 .md 文件，排除目录
-		if !info.IsDir() && strings.HasSuffix(path, ".md") {
-			// 提取文件名作为 slug
-			fileName := strings.TrimSuffix(filepath.Base(path), ".md")
-			
-			// 使用 loadPost 函数加载单篇文章
-			post, err := loadPost(fileName)
-			if err != nil {
-				return err
-			}
-			
-			posts = append(posts, *post)
-		}
-		
-		return nil
-	})
-	
-	if err != nil {
-		return nil, err
-	}
-	
-	// 按日期排序（最新的在前）
-	for i := 0; i < len(posts)-1; i++ {
-		for j := i + 1; j < len(posts); j++ {
-			if posts[i].Date.Before(posts[j].Date) {
-				posts[i], posts[j] = posts[j], posts[i]
-			}
-		}
-	}
-	
-	return posts, nil
-}
-
-
-
 
 func main() {
 	fs := http.FileServer(http.Dir("./static"))
@@ -166,6 +103,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	// fmt.Println(post.Content)
 	
 	// 创建模板并添加自定义函数，解析所有模板文件
 	tmpl := template.Must(template.New("post.html").Funcs(template.FuncMap{
